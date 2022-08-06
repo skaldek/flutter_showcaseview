@@ -26,6 +26,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'animation_handler.dart';
 import 'extension.dart';
 import 'get_position.dart';
 import 'layout_overlays.dart';
@@ -54,15 +55,17 @@ class Showcase extends StatefulWidget {
   final bool showArrow;
   final double? height;
   final double? width;
-  final Duration animationDuration;
+  final Duration slideAnimationDuration;
   final VoidCallback? onToolTipClick;
   final VoidCallback? onTargetClick;
   final bool? disposeOnTap;
-  final bool? disableAnimation;
+  final bool? disableSlideAnimation;
   final EdgeInsets overlayPadding;
   final VoidCallback? onTargetDoubleTap;
   final VoidCallback? onTargetLongPress;
   final BorderRadius? tipBorderRadius;
+  final AnimationType popUpAnimationType;
+  final bool disablePopUpAnimation;
 
   /// Defines blur value.
   /// This will blur the background while displaying showcase.
@@ -89,8 +92,8 @@ class Showcase extends StatefulWidget {
     this.showArrow = true,
     this.onTargetClick,
     this.disposeOnTap,
-    this.animationDuration = const Duration(milliseconds: 2000),
-    this.disableAnimation,
+    this.slideAnimationDuration = const Duration(milliseconds: 2000),
+    this.disableSlideAnimation,
     this.contentPadding =
         const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     this.onToolTipClick,
@@ -100,6 +103,8 @@ class Showcase extends StatefulWidget {
     this.onTargetLongPress,
     this.onTargetDoubleTap,
     this.tipBorderRadius,
+    this.popUpAnimationType = AnimationType.fade,
+    this.disablePopUpAnimation = false,
   })  : height = null,
         width = null,
         container = null,
@@ -136,14 +141,16 @@ class Showcase extends StatefulWidget {
         valueColor: AlwaysStoppedAnimation(Colors.white)),
     this.onTargetClick,
     this.disposeOnTap,
-    this.animationDuration = const Duration(milliseconds: 2000),
-    this.disableAnimation,
+    this.slideAnimationDuration = const Duration(milliseconds: 2000),
+    this.disableSlideAnimation,
     this.contentPadding = const EdgeInsets.symmetric(vertical: 8),
     this.overlayPadding = EdgeInsets.zero,
     this.blurValue,
     this.onTargetLongPress,
     this.onTargetDoubleTap,
     this.tipBorderRadius,
+    this.popUpAnimationType = AnimationType.fade,
+    this.disablePopUpAnimation = false,
   })  : showArrow = false,
         onToolTipClick = null,
         assert(overlayOpacity >= 0.0 && overlayOpacity <= 1.0,
@@ -340,10 +347,12 @@ class _ShowcaseState extends State<Showcase> {
                   contentWidth: widget.width,
                   onTooltipTap: _getOnTooltipTap,
                   contentPadding: widget.contentPadding,
-                  disableAnimation: widget.disableAnimation ??
+                  disableSlideAnimation: widget.disableSlideAnimation ??
                       showCaseWidgetState.disableAnimation,
-                  animationDuration: widget.animationDuration,
+                  slideAnimationDuration: widget.slideAnimationDuration,
                   borderRadius: widget.tipBorderRadius,
+                  popUpAnimationType: widget.popUpAnimationType,
+                  disablePopUpAnimation: widget.disablePopUpAnimation,
                 ),
             ],
           )

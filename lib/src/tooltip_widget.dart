@@ -24,6 +24,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'animation_handler.dart';
 import 'get_position.dart';
 import 'measure_size.dart';
 
@@ -43,9 +44,11 @@ class ToolTipWidget extends StatefulWidget {
   final double? contentWidth;
   final VoidCallback? onTooltipTap;
   final EdgeInsets? contentPadding;
-  final Duration animationDuration;
-  final bool disableAnimation;
+  final Duration slideAnimationDuration;
+  final bool disableSlideAnimation;
   final BorderRadius? borderRadius;
+  final AnimationType popUpAnimationType;
+  final bool disablePopUpAnimation;
 
   const ToolTipWidget({
     Key? key,
@@ -63,10 +66,12 @@ class ToolTipWidget extends StatefulWidget {
     required this.contentHeight,
     required this.contentWidth,
     required this.onTooltipTap,
-    required this.animationDuration,
+    required this.slideAnimationDuration,
     this.contentPadding = const EdgeInsets.symmetric(vertical: 8),
-    required this.disableAnimation,
+    required this.disableSlideAnimation,
     required this.borderRadius,
+    required this.popUpAnimationType,
+    required this.disablePopUpAnimation,
   }) : super(key: key);
 
   @override
@@ -187,14 +192,14 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   void initState() {
     super.initState();
     _parentController = AnimationController(
-      duration: widget.animationDuration,
+      duration: widget.slideAnimationDuration,
       vsync: this,
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _parentController.reverse();
         }
         if (_parentController.isDismissed) {
-          if (!widget.disableAnimation) {
+          if (!widget.disableSlideAnimation) {
             _parentController.forward();
           }
         }
@@ -205,7 +210,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
       curve: Curves.easeInOut,
     );
 
-    if (!widget.disableAnimation) {
+    if (!widget.disableSlideAnimation) {
       _parentController.forward();
     }
   }
@@ -249,110 +254,115 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         right: _getRight(),
         child: FractionalTranslation(
           translation: Offset(0.0, contentFractionalOffset as double),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: Offset(0.0, contentFractionalOffset / 10),
-              end: const Offset(0.0, 0.100),
-            ).animate(_curvedAnimation),
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                padding: widget.showArrow
-                    ? EdgeInsets.only(
-                        top: paddingTop - (isArrowUp ? arrowHeight : 0),
-                        bottom: paddingBottom - (isArrowUp ? 0 : arrowHeight),
-                      )
-                    : null,
-                child: Stack(
-                  alignment: isArrowUp
-                      ? Alignment.topLeft
-                      : _getLeft() == null
-                          ? Alignment.bottomRight
-                          : Alignment.bottomLeft,
-                  children: [
-                    if (widget.showArrow)
-                      Positioned(
-                        left: _getLeft() == null
-                            ? null
-                            : (widget.position!.getCenter() -
-                                (arrowWidth / 2) -
-                                (_getLeft() ?? 0)),
-                        right: _getLeft() == null
-                            ? (MediaQuery.of(context).size.width -
-                                    widget.position!.getCenter()) -
-                                (_getRight() ?? 0) -
-                                (arrowWidth / 2)
-                            : null,
-                        child: CustomPaint(
-                          painter: _Arrow(
-                            strokeColor: widget.tooltipColor!,
-                            strokeWidth: 10,
-                            paintingStyle: PaintingStyle.fill,
-                            isUpArrow: isArrowUp,
-                          ),
-                          child: const SizedBox(
-                            height: arrowHeight,
-                            width: arrowWidth,
+          child: AnimationHandler(
+            animationType: widget.popUpAnimationType,
+            enabled: !widget.disablePopUpAnimation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(0.0, contentFractionalOffset / 10),
+                end: const Offset(0.0, 0.100),
+              ).animate(_curvedAnimation),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: widget.showArrow
+                      ? EdgeInsets.only(
+                          top: paddingTop - (isArrowUp ? arrowHeight : 0),
+                          bottom: paddingBottom - (isArrowUp ? 0 : arrowHeight),
+                        )
+                      : null,
+                  child: Stack(
+                    alignment: isArrowUp
+                        ? Alignment.topLeft
+                        : _getLeft() == null
+                            ? Alignment.bottomRight
+                            : Alignment.bottomLeft,
+                    children: [
+                      if (widget.showArrow)
+                        Positioned(
+                          left: _getLeft() == null
+                              ? null
+                              : (widget.position!.getCenter() -
+                                  (arrowWidth / 2) -
+                                  (_getLeft() ?? 0)),
+                          right: _getLeft() == null
+                              ? (MediaQuery.of(context).size.width -
+                                      widget.position!.getCenter()) -
+                                  (_getRight() ?? 0) -
+                                  (arrowWidth / 2)
+                              : null,
+                          child: CustomPaint(
+                            painter: _Arrow(
+                              strokeColor: widget.tooltipColor!,
+                              strokeWidth: 10,
+                              paintingStyle: PaintingStyle.fill,
+                              isUpArrow: isArrowUp,
+                            ),
+                            child: const SizedBox(
+                              height: arrowHeight,
+                              width: arrowWidth,
+                            ),
                           ),
                         ),
-                      ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        top: isArrowUp ? arrowHeight - 1 : 0,
-                        bottom: isArrowUp ? 0 : arrowHeight - 1,
-                      ),
-                      child: ClipRRect(
-                        borderRadius:
-                            widget.borderRadius ?? BorderRadius.circular(8.0),
-                        child: GestureDetector(
-                          onTap: widget.onTooltipTap,
-                          child: Container(
-                            width: _getTooltipWidth(),
-                            padding: widget.contentPadding,
-                            color: widget.tooltipColor,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: <Widget>[
-                                Column(
-                                  crossAxisAlignment: widget.title != null
-                                      ? CrossAxisAlignment.start
-                                      : CrossAxisAlignment.center,
-                                  children: <Widget>[
-                                    widget.title != null
-                                        ? Text(
-                                            widget.title!,
-                                            style: widget.titleTextStyle ??
-                                                Theme.of(context)
-                                                    .textTheme
-                                                    .headline6!
-                                                    .merge(
-                                                      TextStyle(
-                                                        color: widget.textColor,
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: isArrowUp ? arrowHeight - 1 : 0,
+                          bottom: isArrowUp ? 0 : arrowHeight - 1,
+                        ),
+                        child: ClipRRect(
+                          borderRadius:
+                              widget.borderRadius ?? BorderRadius.circular(8.0),
+                          child: GestureDetector(
+                            onTap: widget.onTooltipTap,
+                            child: Container(
+                              width: _getTooltipWidth(),
+                              padding: widget.contentPadding,
+                              color: widget.tooltipColor,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  Column(
+                                    crossAxisAlignment: widget.title != null
+                                        ? CrossAxisAlignment.start
+                                        : CrossAxisAlignment.center,
+                                    children: <Widget>[
+                                      widget.title != null
+                                          ? Text(
+                                              widget.title!,
+                                              style: widget.titleTextStyle ??
+                                                  Theme.of(context)
+                                                      .textTheme
+                                                      .headline6!
+                                                      .merge(
+                                                        TextStyle(
+                                                          color:
+                                                              widget.textColor,
+                                                        ),
                                                       ),
-                                                    ),
-                                          )
-                                        : const SizedBox(),
-                                    Text(
-                                      widget.description!,
-                                      style: widget.descTextStyle ??
-                                          Theme.of(context)
-                                              .textTheme
-                                              .subtitle2!
-                                              .merge(
-                                                TextStyle(
-                                                  color: widget.textColor,
+                                            )
+                                          : const SizedBox(),
+                                      Text(
+                                        widget.description!,
+                                        style: widget.descTextStyle ??
+                                            Theme.of(context)
+                                                .textTheme
+                                                .subtitle2!
+                                                .merge(
+                                                  TextStyle(
+                                                    color: widget.textColor,
+                                                  ),
                                                 ),
-                                              ),
-                                    ),
-                                  ],
-                                )
-                              ],
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -367,33 +377,37 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
             top: contentY - 10,
             child: FractionalTranslation(
               translation: Offset(0.0, contentFractionalOffset as double),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(0.0, contentFractionalOffset / 10),
-                  end: !widget.showArrow && !isArrowUp
-                      ? const Offset(0.0, 0.0)
-                      : const Offset(0.0, 0.100),
-                ).animate(_curvedAnimation),
-                child: Material(
-                  color: Colors.transparent,
-                  child: GestureDetector(
-                    onTap: widget.onTooltipTap,
-                    child: Container(
-                      padding: EdgeInsets.only(
-                        top: paddingTop,
-                      ),
-                      color: Colors.transparent,
-                      child: Center(
-                        child: MeasureSize(
-                            onSizeChange: (size) {
-                              setState(() {
-                                var tempPos = position;
-                                tempPos = Offset(
-                                    position!.dx, position!.dy + size!.height);
-                                position = tempPos;
-                              });
-                            },
-                            child: widget.container),
+              child: AnimationHandler(
+                animationType: widget.popUpAnimationType,
+                enabled: !widget.disablePopUpAnimation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset(0.0, contentFractionalOffset / 10),
+                    end: !widget.showArrow && !isArrowUp
+                        ? const Offset(0.0, 0.0)
+                        : const Offset(0.0, 0.100),
+                  ).animate(_curvedAnimation),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: GestureDetector(
+                      onTap: widget.onTooltipTap,
+                      child: Container(
+                        padding: EdgeInsets.only(
+                          top: paddingTop,
+                        ),
+                        color: Colors.transparent,
+                        child: Center(
+                          child: MeasureSize(
+                              onSizeChange: (size) {
+                                setState(() {
+                                  var tempPos = position;
+                                  tempPos = Offset(position!.dx,
+                                      position!.dy + size!.height);
+                                  position = tempPos;
+                                });
+                              },
+                              child: widget.container),
+                        ),
                       ),
                     ),
                   ),
